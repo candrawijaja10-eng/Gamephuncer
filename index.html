@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Boxing Brawler - Mobile Portrait</title>
+    <style>
+        * {
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #0a0f1e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            padding: 12px;
+        }
+        .game-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            position: relative;
+            min-height: 100vh;
+            justify-content: flex-end;
+            padding-bottom: 20px;
+            box-sizing: border-box;
+        }
+        canvas {
+            width: 100%;
+            height: auto;
+            max-height: calc(100vh - 140px);
+            background: #000;
+            border-radius: 32px;
+            box-shadow: 0 20px 30px rgba(0,0,0,0.5);
+            display: block;
+            cursor: pointer;
+            flex-shrink: 1;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 0;
+            padding: 15px 0;
+            flex-wrap: wrap;
+            width: 100%;
+            position: relative;
+            z-index: 10;
+        }
+        button {
+            flex: 1;
+            min-width: 100px;
+            font-size: 1rem;
+            font-weight: bold;
+            padding: 12px 8px;
+            border: none;
+            border-radius: 60px;
+            font-family: inherit;
+            background: #1f2a3e;
+            color: white;
+            box-shadow: 0 5px 0 rgba(0,0,0,0.3);
+            transition: 0.05s linear;
+            cursor: pointer;
+        }
+        button:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 rgba(0,0,0,0.3);
+        }
+        button:disabled {
+            opacity: 0.6;
+            transform: none;
+            cursor: not-allowed;
+        }
+        .nuclear { background: radial-gradient(circle at 30% 20%, #e34d4d, #8b0000); }
+        .normal { background: #3a5a7a; }
+        .health-bar-container {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            z-index: 20;
+            pointer-events: none;
+        }
+        .health-bar-bg {
+            width: 100%;
+            height: 24px;
+            background: #333;
+            border-radius: 12px;
+            border: 3px solid #fff;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .health-bar-fill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ff4444 0%, #ff8844 50%, #ffaa44 100%);
+            border-radius: 8px;
+            transition: width 0.3s ease-out;
+        }
+        .health-text {
+            text-align: center;
+            margin-top: 6px;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+        .ko-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0,0,0,0.85);
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        .ko-screen.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .ko-text {
+            font-size: 6rem;
+            font-weight: 900;
+            color: #ff4444;
+            text-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
+            animation: koPulse 1s ease-in-out infinite;
+            margin-bottom: 30px;
+        }
+        @keyframes koPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        .try-again-btn {
+            padding: 15px 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #ff4444, #ff8844);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(255,68,68,0.5);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .try-again-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 10px rgba(255,68,68,0.7);
+        }
+        @media (max-width: 550px) {
+            .health-bar-container { width: 200px; top: 20px; }
+            .health-bar-bg { height: 20px; }
+            .health-text { font-size: 0.8rem; }
+            .ko-text { font-size: 4rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-wrapper">
+    <div class="health-bar-container">
+        <div class="health-bar-bg">
+            <div class="health-bar-fill" id="healthBarFill"></div>
+        </div>
+        <div class="health-text"><span id="healthText">1000</span> / 1000</div>
+    </div>
+    <canvas id="gameCanvas" width="600" height="800" style="width:100%; height:auto; aspect-ratio:600/800"></canvas>
+    <div class="controls">
+        <button id="nuclearBtn" class="nuclear">💣 NUCLEAR</button>
+        <button id="normalBtn" class="normal">👊 NORMAL</button>
+    </div>
+    <div class="ko-screen" id="koScreen">
+        <div class="ko-text">K.O.</div>
+        <button class="try-again-btn" id="tryAgainBtn">TRY AGAIN</button>
+    </div>
+</div>
+
+<script>
+    (function(){
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const assets = {
+            bg: new Image(),
+            character1: new Image(),
+            character2: new Image(),
+            righthit: new Image(),
+            lefthit: new Image(),
+            uphit: new Image(),
+            missile: new Image(),
+            explode: new Image(),
+            explodePng: new Image(),
+            doom: new Image(),
+            doom2: new Image(),
+            doom3: new Image(),
+            punch: new Image(),
+            punch2: new Image(),
+            hitbox: new Image(),
+            power: new Image(),
+            ko: new Image()
+        };
+        
+        const sounds = {
+            punchHit: new Audio(),
+            explosionHit: new Audio()
+        };
+        
+        sounds.punchHit.src = "punchhit.mp3";
+        sounds.explosionHit.src = "explosionhit.mp3";
+        
+        assets.bg.src = "bg.png";
+        assets.character1.src = "main1.png";
+        assets.character2.src = "main2.png";
+        assets.righthit.src = "righthit.png";
+        assets.lefthit.src = "lefthit.png";
+        assets.uphit.src = "doom.png";
+        assets.missile.src = "missile.png";
+        assets.explode.src = "explode.gif";
+        assets.explodePng.src = "explode.png";
+        assets.doom.src = "doom.png";
+        assets.doom2.src = "doom2.png";
+        assets.doom3.src = "doom3.png";
+        assets.punch.src = "punch.png";
+        assets.punch2.src = "punch2.png";
+        assets.hitbox.src = "hitbox.png";
+        assets.power.src = "power.png";
+        assets.ko.src = "KO.png";
+        
+        let maxHealth = 1000;
+        let currentHealth = 1000;
+        let isAnimating = false;
+        let activeEffect = null;
+        let staggerEffect = null;
+        let characterVisible = true;
+        let characterHideEndTime = 0;
+        let nuclearExplosionOverlay = null;
+        let nuclearDoomMode = false;
+        let nuclearDoomEndTime = 0;
+        let doomFrame = 1;
+        let doomFrameStartTime = 0;
+        let hitboxEffect = null;
+        let koScene = null;
+        let isGameOver = false;
+        let idleFrame = 0;
+        let lastFrameTime = 0;
+        const idleFrameInterval = 150;
+        
+        const charWidth = Math.floor(canvas.width * 0.85);
+        const charHeight = Math.floor(charWidth * 1.2857);
+        const charX = (canvas.width - charWidth) / 2;
+        const charY = canvas.height - charHeight - 2; //character height
+        
+        function takeDamage(damage) {
+            currentHealth = Math.max(0, currentHealth - damage);
+            updateHealthBar();
+        }
+        
+        function updateHealthBar() {
+            const healthPercent = (currentHealth / maxHealth) * 100;
+            document.getElementById('healthBarFill').style.width = healthPercent + '%';
+            document.getElementById('healthText').innerText = Math.floor(currentHealth);
+            
+            const fill = document.getElementById('healthBarFill');
+            if(healthPercent > 60) {
+                fill.style.background = 'linear-gradient(90deg, #ff4444 0%, #ff8844 50%, #ffaa44 100%)';
+            } else if(healthPercent > 30) {
+                fill.style.background = 'linear-gradient(90deg, #ff4444 0%, #ff8844 100%)';
+            } else {
+                fill.style.background = 'linear-gradient(90deg, #aa0000 0%, #ff4444 100%)';
+            }
+        }
+        
+        function hideCharacterFor(ms) {
+            characterVisible = false;
+            characterHideEndTime = performance.now() + ms;
+        }
+        
+        function showStagger(direction) {
+            let img = null;
+            if(direction === 'left') img = assets.lefthit;
+            else if(direction === 'right') img = assets.righthit;
+            else if(direction === 'up') img = assets.uphit;
+            if(!img) return;
+            staggerEffect = { img: img, endTime: performance.now() + 1000 };
+        }
+        
+        function showHitbox(x, y) {
+            hitboxEffect = {
+                startTime: performance.now(),
+                duration: 600,
+                x: x,
+                y: y
+            };
+        }
+        
+        function setButtonsLock(locked) {
+            const btns = ['nuclearBtn', 'normalBtn'];
+            btns.forEach(id => {
+                const btn = document.getElementById(id);
+                if(btn) btn.disabled = locked;
+            });
+        }
+        
+        function checkLowHealth() {
+            return currentHealth <= 10;
+        }
+        
+        function startKOScene() {
+            isGameOver = true;
+            activeEffect = null;
+            staggerEffect = null;
+            nuclearDoomMode = false;
+            nuclearExplosionOverlay = null;
+            hitboxEffect = null;
+            
+            koScene = {
+                phase: 'windup',
+                startTime: performance.now(),
+                powerY: canvas.height - 100,
+                charScale: 1,
+                charY: charY,
+                charX: charX
+            };
+            
+            setButtonsLock(true);
+        }
+        
+        function showGameOverScreen() {
+            document.getElementById('koScreen').classList.add('show');
+        }
+        
+        function resetGame() {
+            currentHealth = 1000;
+            isGameOver = false;
+            koScene = null;
+            characterVisible = true;
+            idleFrame = 0;
+            lastFrameTime = 0;
+            updateHealthBar();
+            document.getElementById('koScreen').classList.remove('show');
+            setButtonsLock(false);
+        }
+        
+        function startNuclearMissile() {
+            if(isAnimating || isGameOver) return;
+            
+            if(checkLowHealth()) {
+                startKOScene();
+                return;
+            }
+            
+            isAnimating = true;
+            setButtonsLock(true);
+            activeEffect = {
+                type: 'missile',
+                fromX: canvas.width / 2,
+                fromY: -100,
+                startTime: performance.now(),
+                duration: 800
+            };
+        }
+        
+        function triggerNuclearImpact() {
+            activeEffect = null;
+            
+            nuclearDoomMode = true;
+            doomFrame = 1;
+            doomFrameStartTime = performance.now();
+            nuclearDoomEndTime = performance.now() + 2000;
+            
+            nuclearExplosionOverlay = {
+                startTime: performance.now(),
+                duration: 700
+            };
+            
+            sounds.explosionHit.currentTime = 0;
+            sounds.explosionHit.play().catch(e => console.log("Audio play failed:", e));
+            
+            let hitsApplied = 0;
+            const maxHits = 8;
+            
+            function applyNuclearHits() {
+                if(hitsApplied < maxHits) {
+                    takeDamage(20);
+                    hitsApplied++;
+                    if(hitsApplied < maxHits) {
+                        setTimeout(applyNuclearHits, 100);
+                    } else {
+                        const checkAndUnlock = () => {
+                            if(!nuclearDoomMode && !nuclearExplosionOverlay) {
+                                isAnimating = false;
+                                setButtonsLock(false);
+                            } else {
+                                setTimeout(checkAndUnlock, 100);
+                            }
+                        };
+                        setTimeout(checkAndUnlock, 800);
+                    }
+                }
+            }
+            applyNuclearHits();
+        }
+        
+        function startNormalPunch() {
+            if(isAnimating || isGameOver) return;
+            
+            if(checkLowHealth()) {
+                startKOScene();
+                return;
+            }
+            
+            isAnimating = true;
+            setButtonsLock(true);
+            const dirs = ['left', 'right'];
+            const staggerDir = dirs[Math.floor(Math.random() * dirs.length)];
+            let fromPoint;
+            if(staggerDir === 'left') {
+                fromPoint = { x: charX - 20, y: charY + charHeight * 0.25 };
+            } else {
+                fromPoint = { x: charX + charWidth + 100, y: charY + charHeight * 0.25 };
+            }
+            activeEffect = {
+                type: 'punch',
+                from: fromPoint,
+                staggerDir: staggerDir,
+                startTime: performance.now(),
+                duration: 180
+            };
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if(assets.bg.complete && assets.bg.naturalWidth) {
+                ctx.drawImage(assets.bg, 0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = "#1a1e2a";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            
+            if(nuclearDoomMode && performance.now() >= nuclearDoomEndTime) {
+                nuclearDoomMode = false;
+                doomFrame = 1;
+            }
+            
+            if(nuclearDoomMode) {
+                const elapsed = performance.now() - doomFrameStartTime;
+                if(elapsed > 900 && doomFrame === 1) {
+                    doomFrame = 2;
+                } else if(elapsed > 1300 && doomFrame === 2) {
+                    doomFrame = 3;
+                }
+            }
+            
+            if(!characterVisible && performance.now() >= characterHideEndTime) {
+                characterVisible = true;
+            }
+            
+            if(!koScene) {
+                if(nuclearDoomMode) {
+                    let currentDoomImg = assets.doom;
+                    if(doomFrame === 2) currentDoomImg = assets.doom2;
+                    else if(doomFrame === 3) currentDoomImg = assets.doom3;
+                    
+                    if(currentDoomImg.complete && currentDoomImg.naturalWidth) {
+                        ctx.drawImage(currentDoomImg, charX, charY, charWidth, charHeight);
+                    }
+                } else if(characterVisible) {
+                    const now = performance.now();
+                    if(now - lastFrameTime > idleFrameInterval) {
+                        idleFrame = idleFrame === 0 ? 1 : 0;
+                        lastFrameTime = now;
+                    }
+                    const currentImg = idleFrame === 0 ? assets.character1 : assets.character2;
+                    if(currentImg.complete && currentImg.naturalWidth) {
+                        ctx.drawImage(currentImg, charX, charY, charWidth, charHeight);
+                    } else {
+                        ctx.fillStyle = "#dd9966";
+                        ctx.fillRect(charX, charY, charWidth, charHeight);
+                    }
+                }
+            }
+            
+            if(nuclearExplosionOverlay) {
+                const elapsed = performance.now() - nuclearExplosionOverlay.startTime;
+                const duration = nuclearExplosionOverlay.duration;
+                
+                if(elapsed < duration) {
+                    const progress = elapsed / duration;
+                    const easeOut = 1 - Math.pow(1 - progress, 3);
+                    const startScale = 0.2;
+                    const endScale = 2;
+                    const currentScale = startScale + (endScale - startScale) * easeOut;
+                    
+                    let sizeW = charWidth * currentScale;
+                    let sizeH = charHeight * currentScale;
+                    let cx = charX + charWidth/2 - sizeW/2;
+                    let cy = charY + charHeight/2 - sizeH/2;
+                    
+                    ctx.drawImage(assets.explodePng, cx, cy, sizeW, sizeH);
+                } else {
+                    nuclearExplosionOverlay = null;
+                }
+            }
+            
+            if(staggerEffect && staggerEffect.endTime > performance.now()) {
+                ctx.drawImage(staggerEffect.img, charX, charY, charWidth, charHeight);
+            } else {
+                staggerEffect = null;
+            }
+            
+            if(hitboxEffect) {
+                const elapsed = performance.now() - hitboxEffect.startTime;
+                if(elapsed < hitboxEffect.duration) {
+                    const progress = elapsed / hitboxEffect.duration;
+                    const scale = 1.2 - (0.2 * progress);
+                    const size = 250 * scale;
+                    
+                    ctx.drawImage(
+                        assets.hitbox,
+                        hitboxEffect.x - size/2,
+                        hitboxEffect.y - size/2,
+                        size,
+                        size
+                    );
+                } else {
+                    hitboxEffect = null;
+                }
+            }
+            
+            if(activeEffect) {
+                const now = performance.now();
+                const t = Math.min(1, (now - activeEffect.startTime) / activeEffect.duration);
+                
+                if(activeEffect.type === 'missile') {
+                    if(t >= 1) {
+                        activeEffect = null;
+                        triggerNuclearImpact();
+                    } else {
+                        let startX = activeEffect.fromX;
+                        let startY = activeEffect.fromY;
+                        let endX = charX + charWidth/2;
+                        let endY = charY + charHeight/2;
+                        let currX = startX + (endX - startX) * t;
+                        let currY = startY + (endY - startY) * t;
+                        ctx.drawImage(assets.missile, currX-50, currY-30, 200, 180);//misille size
+                    }
+                }
+                else if(activeEffect.type === 'punch') {
+                    if(t >= 1 && !activeEffect.impactPhase) {
+                        activeEffect.impactPhase = true;
+                        activeEffect.impactStartTime = performance.now();
+                        takeDamage(22);
+                        hideCharacterFor(1000);
+                        showStagger(activeEffect.staggerDir);
+                        
+                        sounds.punchHit.currentTime = 0;
+                        sounds.punchHit.play().catch(e => console.log("Audio play failed:", e));
+                        
+                        let faceX = charX + charWidth/2 + (Math.random() * 40 - 20);
+                        let faceY = charY + charHeight*0.25 + (Math.random() * 40 - 20);
+                        showHitbox(faceX, faceY);
+                    }
+                    
+                    if(activeEffect.impactPhase) {
+                        if(performance.now() - activeEffect.impactStartTime >= 1000) {
+                            activeEffect = null;
+                            isAnimating = false;
+                            setButtonsLock(false);
+                            return;
+                        }
+                        
+                        let toX = charX + charWidth/2;
+                        let toY = charY + charHeight*0.25;
+                        const punchImg = activeEffect.staggerDir === 'right' ? assets.punch2 : assets.punch;
+                        const punchSize = 140;
+                        ctx.drawImage(punchImg, toX-punchSize/2, toY-punchSize/2, punchSize, punchSize);
+                    } else {
+                        let from = activeEffect.from;
+                        let toX = charX + charWidth/2;
+                        let toY = charY + charHeight*0.25;
+                        let currX = from.x + (toX - from.x) * t;
+                        let currY = from.y + (toY - from.y) * t;
+                        const punchImg = activeEffect.staggerDir === 'right' ? assets.punch2 : assets.punch;
+                        const punchSize = 140;
+                        ctx.drawImage(punchImg, currX-punchSize/2, currY-punchSize/2, punchSize, punchSize);
+                    }
+                }
+            }
+            
+            if(koScene) {
+                const koElapsed = performance.now() - koScene.startTime;
+                
+                if(koScene.phase === 'windup') {
+                    if(koElapsed > 500) {
+                        koScene.phase = 'punch';
+                        koScene.punchStartTime = performance.now();
+                    }
+                    
+                    const currentImg = idleFrame === 0 ? assets.character1 : assets.character2;
+                    if(currentImg.complete && currentImg.naturalWidth) {
+                        ctx.drawImage(currentImg, charX, charY, charWidth, charHeight);
+                    }
+                    
+                    const riseOffset = (koElapsed / 500) * 50;
+                    const powerY = canvas.height - 150 + riseOffset;
+                    if(assets.power.complete && assets.power.naturalWidth) {
+                        const powerSize = 400;
+                        ctx.drawImage(assets.power, (canvas.width - powerSize)/2, powerY, powerSize, powerSize);
+                    }
+                }
+                else if(koScene.phase === 'punch') {
+                    const punchElapsed = performance.now() - koScene.punchStartTime;
+                    const punchDuration = 500;
+                    const punchProgress = Math.min(1, punchElapsed / punchDuration);
+                    
+                    if(punchProgress >= 1) {
+                        koScene.phase = 'launch';
+                        koScene.launchStartTime = performance.now();
+                        sounds.punchHit.currentTime = 0;
+                        sounds.punchHit.play().catch(e => {});
+                    }
+                    
+                    if(punchProgress < 0.8) {
+                        const currentImg = idleFrame === 0 ? assets.character1 : assets.character2;
+                        if(currentImg.complete && currentImg.naturalWidth) {
+                            ctx.drawImage(currentImg, charX, charY, charWidth, charHeight);
+                        }
+                    }
+                    
+                    const startY = canvas.height - 100;
+                    const endY = charY + charHeight * 0.4;
+                    const currentPowerY = startY + (endY - startY) * punchProgress;
+                    
+                    if(assets.power.complete && assets.power.naturalWidth) {
+                        const powerSize = 400;
+                        ctx.drawImage(assets.power, (canvas.width - powerSize)/2, currentPowerY - powerSize/2, powerSize, powerSize);
+                    }
+                }
+                else if(koScene.phase === 'launch') {
+                    const launchElapsed = performance.now() - koScene.launchStartTime;
+                    const launchDuration = 1500;
+                    const launchProgress = Math.min(1, launchElapsed / launchDuration);
+                    
+                    if(launchProgress >= 1) {
+                        koScene.phase = 'end';
+                        showGameOverScreen();
+                    }
+                    
+                    const easeOut = 1 - Math.pow(1 - launchProgress, 3);
+                    
+                    const startX = charX;
+                    const endX = (canvas.width - charWidth) / 2;
+                    const startY = charY;
+                    const endY = -charHeight;
+                    const startScale = 1;
+                    const endScale = 0;
+                    
+                    const currentX = startX + (endX - startX) * easeOut;
+                    const currentY = startY + (endY - startY) * easeOut;
+                    const currentScale = startScale + (endScale - startScale) * easeOut;
+                    
+                    const currentW = charWidth * currentScale;
+                    const currentH = charHeight * currentScale;
+                    
+                    if(assets.ko.complete && assets.ko.naturalWidth) {
+                        ctx.drawImage(assets.ko, currentX + (charWidth - currentW)/2, currentY, currentW, currentH);
+                    }
+                    
+                    if(launchProgress < 0.3) {
+                        const fadeAlpha = 1 - (launchProgress / 0.3);
+                        ctx.globalAlpha = fadeAlpha;
+                        const powerSize = 400;
+                        ctx.drawImage(assets.power, (canvas.width - powerSize)/2, charY + charHeight * 0.4 - powerSize/2, powerSize, powerSize);
+                        ctx.globalAlpha = 1;
+                    }
+                }
+            }
+        }
+        
+        function gameLoop() {
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        document.getElementById('nuclearBtn').addEventListener('click', startNuclearMissile);
+        document.getElementById('normalBtn').addEventListener('click', startNormalPunch);
+        document.getElementById('tryAgainBtn').addEventListener('click', resetGame);
+        
+        gameLoop();
+    })();
+</script>
+</body>
+</html>
