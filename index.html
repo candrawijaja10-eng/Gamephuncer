@@ -17,27 +17,27 @@
             justify-content: center;
             align-items: center;
             font-family: 'Segoe UI', system-ui, sans-serif;
-            padding: 12px;
+            padding: 0;
         }
         .game-wrapper {
             display: flex;
             flex-direction: column;
             align-items: center;
             width: 100%;
+            height: 100vh;
             max-width: 600px;
             margin: 0 auto;
             position: relative;
-            min-height: 100vh;
-            justify-content: flex-end;
-            padding-bottom: 20px;
+            justify-content: space-between;
+            padding: 10px 0;
             box-sizing: border-box;
         }
         canvas {
             width: 100%;
             height: auto;
-            max-height: calc(100vh - 140px);
+            max-height: calc(100vh - 120px);
             background: #000;
-            border-radius: 32px;
+            border-radius: 20px;
             box-shadow: 0 20px 30px rgba(0,0,0,0.5);
             display: block;
             cursor: pointer;
@@ -47,8 +47,7 @@
             display: flex;
             justify-content: center;
             gap: 12px;
-            margin-top: 0;
-            padding: 15px 0;
+            padding: 10px 15px;
             flex-wrap: wrap;
             width: 100%;
             position: relative;
@@ -82,19 +81,19 @@
         .normal { background: #3a5a7a; }
         .health-bar-container {
             position: absolute;
-            top: 30px;
+            top: 20px;
             left: 50%;
             transform: translateX(-50%);
-            width: 300px;
+            width: 280px;
             z-index: 20;
             pointer-events: none;
         }
         .health-bar-bg {
             width: 100%;
-            height: 24px;
+            height: 20px;
             background: #333;
-            border-radius: 12px;
-            border: 3px solid #fff;
+            border-radius: 10px;
+            border: 2px solid #fff;
             overflow: hidden;
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
@@ -102,15 +101,15 @@
             width: 100%;
             height: 100%;
             background: linear-gradient(90deg, #ff4444 0%, #ff8844 50%, #ffaa44 100%);
-            border-radius: 8px;
+            border-radius: 6px;
             transition: width 0.3s ease-out;
         }
         .health-text {
             text-align: center;
-            margin-top: 6px;
+            margin-top: 4px;
             font-family: 'Segoe UI', system-ui, sans-serif;
             font-weight: bold;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: #fff;
             text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
@@ -135,7 +134,7 @@
             pointer-events: auto;
         }
         .ko-text {
-            font-size: 6rem;
+            font-size: 5rem;
             font-weight: 900;
             color: #ff4444;
             text-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
@@ -163,8 +162,8 @@
             box-shadow: 0 8px 10px rgba(255,68,68,0.7);
         }
         @media (max-width: 550px) {
-            .health-bar-container { width: 200px; top: 20px; }
-            .health-bar-bg { height: 20px; }
+            .health-bar-container { width: 200px; top: 15px; }
+            .health-bar-bg { height: 18px; }
             .health-text { font-size: 0.8rem; }
             .ko-text { font-size: 4rem; }
         }
@@ -178,7 +177,7 @@
         </div>
         <div class="health-text"><span id="healthText">1000</span> / 1000</div>
     </div>
-    <canvas id="gameCanvas" width="600" height="800" style="width:100%; height:auto; aspect-ratio:600/800"></canvas>
+    <canvas id="gameCanvas" width="1080" height="1920" style="width:100%; height:auto; aspect-ratio:9/16"></canvas>
     <div class="controls">
         <button id="nuclearBtn" class="nuclear">💣 NUCLEAR</button>
         <button id="normalBtn" class="normal">👊 NORMAL</button>
@@ -262,7 +261,7 @@
         const charWidth = Math.floor(canvas.width * 0.85);
         const charHeight = Math.floor(charWidth * 1.2857);
         const charX = (canvas.width - charWidth) / 2;
-        const charY = canvas.height - charHeight - 2; //character height
+        const charY = canvas.height - charHeight - 2;
         
         function takeDamage(damage) {
             currentHealth = Math.max(0, currentHealth - damage);
@@ -557,7 +556,7 @@
                         let endY = charY + charHeight/2;
                         let currX = startX + (endX - startX) * t;
                         let currY = startY + (endY - startY) * t;
-                        ctx.drawImage(assets.missile, currX-50, currY-30, 200, 180);//misille size
+                        ctx.drawImage(assets.missile, currX-50, currY-30, 200, 180);
                     }
                 }
                 else if(activeEffect.type === 'punch') {
